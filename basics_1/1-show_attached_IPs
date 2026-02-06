@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#displays all ipv4 addresses on device
+
+ifconfig | grep -oP '(?<=inet\s)\d+(\.\d+){3}

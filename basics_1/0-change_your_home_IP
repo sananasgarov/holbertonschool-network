@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# change ur home ip
+set -euo pipefail
+
+HOSTS_FILE="/etc/hosts"
+BACKUP_FILE="/etc/hosts.bak.$(date +%Y%m%d%H%M%S)"
+
+# Must run as root
+if [[ "${EUID}" -ne 0 ]]; then
+  echo "Error: run this script as root (use sudo)." >&2
+  exit 1
+fi
+
+# Backup
+cp -a "$HOSTS_FILE" "$BACKUP_FILE"
+echo "Backup created: $BACKUP_FILE"
+
+tmp="$(mktemp)"
+
+# Keep everything except lines that contain 'localhost' or 'facebook.com' as tokens (non-comment lines)
+awk '
+  /^[[:space:]]*#/ { print; next }
+  {
+    for (i=1; i<=NF; i++) {
+      if ($i == "localhost" || $i == "facebook.com") next
+    }
+    print
+  }
+' "$HOSTS_FILE" > "$tmp"
+
+# Append required mappings
+{
+  echo ""
+  echo "# Added by 0-change_your_home_IP"
+  echo "127.0.0.2 localhost"
+  echo "8.8.8.8 facebook.com"
+} >> "$tmp"
+
+# Write IN-PLACE (works even if /etc/hosts is bind-mounted and cannot be replaced)
+cat "$tmp" > "$HOSTS_FILE"
+rm -f "$tmp"
